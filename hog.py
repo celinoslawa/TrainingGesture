@@ -2,6 +2,7 @@
 import numpy as np
 import cv2
 np.set_printoptions(threshold=np.nan)
+
 class StatModel(object):
     def load(self, fn):
         self.model.load(fn)  # Known bug: https://github.com/opencv/opencv/issues/4969
@@ -27,9 +28,9 @@ class SVM(StatModel):
 #text_file = open("HOG.txt", "w")
 #size of image
 winSize = (60, 100)
-blockSize = (20, 20)
+blockSize = (40, 40)
 #determines the overlap between neighboring blocks and controls the degree of contrast normalization
-blockStride = (10, 10)
+blockStride = (20, 20)
 #The cellSize is chosen based on the scale of the features important to do the classification.
 cellSize = (10, 10)
 nbins = 9
@@ -45,8 +46,9 @@ signedGradient = True
 #defining hog parameters
 hog = cv2.HOGDescriptor(winSize, blockSize, blockStride, cellSize, nbins, derivAperture, winSigma,
                         histogramNormType, L2HysThreshold, gammaCorrection, nlevels, signedGradient)
+
+##############################  TRAINING
 hog_descriptors = []
-#numOfExamples = [125, 134, 129, 129, 128, 137, 134, 134, 138, 132]
 N = 125
 for i in range(0,10):
     gest = i
@@ -57,42 +59,47 @@ for i in range(0,10):
         #print(j)
         img = cv2.imread('%d' %gest + 'mask/dys_%d.jpg' %j, cv2.IMREAD_GRAYSCALE)
         mask = cv2.resize(img, (60, 100), interpolation=cv2.INTER_AREA)
-        #h, w = img.shape[:2]
         hog_descriptors.append(hog.compute(mask))
         #text_file.write("%s" %hog.compute(mask))
 
-#Remove single-dimensional entries from the shape of an array.
 #print('Write to file ...')
 #text_file.write( str(hog_descriptors))
+
+#Remove single-dimensional entries from the shape of an array.
 hog_descriptors = np.squeeze(hog_descriptors)
 responses = np.int32(np.repeat(np.arange(10),N-1)[:,np.newaxis])
+#print('Responses: %s' %str(responses))
 print(responses.shape)
 print(hog_descriptors.shape)
 
 print('Training SVM model ...')
 model = SVM()
 model.train(hog_descriptors, responses)
+
 print('Saving SVM model ...')
 model.save('digits_svm.dat')
 
+###################################### TESTING
 test_N = 84
 hog_descriptors_test = []
 for j in range(1, test_N):
     # print(j)
     imgT = cv2.imread('testmask/dys_%d.jpg' % j, cv2.IMREAD_GRAYSCALE)
     maskT = cv2.resize(imgT, (60, 100), interpolation=cv2.INTER_AREA)
-    # h, w = img.shape[:2]
     hog_descriptors_test.append(hog.compute(maskT))
 hog_descriptors_test = np.squeeze(hog_descriptors_test)
+print('Write to file ...')
+#text_file.write( str(hog_descriptors_test))
 
 label_test=[ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9.,  0.,  2.,  2.,  2.,  2.,  2.,  2.,  2.,  2.,
   2.,  2.,  3.,  3.,  3.,  3.,  3.,  4.,  4.,  4.,  4.,  4.,  5.,  5.,  5.,  6.,  6.,  6.,
   6.,  6.,  6.,  6.,  6.,  6.,  6.,  6.,  6.,  7.,  7.,  7.,  7.,  7.,  7.,  7.,  7.,  7.,
   8.,  8.,  8.,  8.,  8.,  8.,  8.,  8.,  8.,  9.,  9.,  9.,  9.,  9.,  9.,  9.,  9.,  9.,
   9.,  9.,  9.,  9.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]
+
 resp = model.predict(hog_descriptors_test)
 print(resp.shape)
-print(resp)
+print('Resp: %s' %str(resp))
 
 err = (label_test != resp).mean()
 print('Accuracy: %.2f %%' % ((1 - err) * 100))
