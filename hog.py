@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import numpy as np
 import cv2
+import json
 np.set_printoptions(threshold=np.nan)
 
 class StatModel(object):
@@ -68,8 +69,16 @@ for i in range(0,10):
 #Remove single-dimensional entries from the shape of an array.
 hog_descriptors = np.squeeze(hog_descriptors)
 responses = np.int32(np.repeat(np.arange(10),N-1)[:,np.newaxis])
-#print('Responses: %s' %str(responses))
+print('Responses: %s' %str(responses))
 print(responses.shape)
+responsesList = responses.tolist()
+with open("responses.json", "w") as f:
+    json.dump(obj=responsesList, fp=f)
+
+hog_descriptorsList = hog_descriptors.tolist()
+with open("hog_descriptors.json", "w") as f:
+    json.dump(obj=hog_descriptorsList, fp=f)
+
 print(hog_descriptors.shape)
 
 print('Training SVM model ...')
@@ -107,4 +116,3 @@ print('Accuracy: %.2f %%' % ((1 - err) * 100))
 
 #text_file.write(str(hog_descriptors))
 #text_file.close()
-
